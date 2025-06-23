@@ -1,5 +1,5 @@
 /*
- * AARCH64 specific definitions for NOLIBC
+ * ARM64 specific definitions for NOLIBC
  * Copyright (C) 2017-2022 Willy Tarreau <w@1wt.eu>
  *
  * Permission is hereby granted, free of charge, to any person obtaining
@@ -23,13 +23,13 @@
  * OTHER DEALINGS IN THE SOFTWARE.
  */
 
-#ifndef _NOLIBC_ARCH_AARCH64_H
-#define _NOLIBC_ARCH_AARCH64_H
+#ifndef _NOLIBC_ARCH_ARM64_H
+#define _NOLIBC_ARCH_ARM64_H
 
 #include "compiler.h"
 #include "crt.h"
 
-/* Syscalls for AARCH64 :
+/* Syscalls for ARM64 :
  *   - registers are 64-bit
  *   - stack is 16-byte aligned
  *   - syscall number is passed in x8
@@ -169,4 +169,4 @@ void __attribute__((weak, noreturn)) __nolibc_entrypoint __no_stack_protector _s
 	);
 	__nolibc_entrypoint_epilogue();
 }
-#endif /* _NOLIBC_ARCH_AARCH64_H */
+#endif /* _NOLIBC_ARCH_ARM64_H */
