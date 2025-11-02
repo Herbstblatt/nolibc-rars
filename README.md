@@ -9,4 +9,4 @@ This repository continues to be occasionally resynchronized with the kernel for
 those who need the ease of use of an out-of-tree project, though do not expect
 frequent updates.
 
-The latest resync was made against Linux 6.16-rc1.
+The latest resync was made against Linux 6.18-rc1.
