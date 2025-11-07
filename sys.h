@@ -137,6 +137,7 @@ void *sbrk(intptr_t inc)
 
 /*
  * int chdir(const char *path);
+ * int fchdir(int fildes);
  */
 
 static __attribute__((unused))
@@ -149,6 +150,18 @@ static __attribute__((unused))
 int chdir(const char *path)
 {
 	return __sysret(sys_chdir(path));
+}
+
+static __attribute__((unused))
+int sys_fchdir(int fildes)
+{
+	return my_syscall1(__NR_fchdir, fildes);
+}
+
+static __attribute__((unused))
+int fchdir(int fildes)
+{
+	return __sysret(sys_fchdir(fildes));
 }
 
 
