@@ -27,7 +27,6 @@
 #define _NOLIBC_RARS_H
 
 #include "compiler.h"
-#include "crt.h"
 
 /* Syscalls for RISCV :
  *   - stack is 16-byte aligned
@@ -199,5 +198,19 @@
 	);                                                                    \
 	_arg1;                                                                \
 })
+
+#define __sysret(arg)							\
+({									\
+	__typeof__(arg) __sysret_arg = (arg);				\
+	(__sysret_arg < 0)                              /* error ? */	\
+		? (({ SET_ERRNO(-__sysret_arg); }), -1) /* ret -1 with errno = -arg */ \
+		: __sysret_arg;                         /* return original value */ \
+})
+
+#define __syscall_narg(_0, _1, _2, _3, _4, _5, _6, N, ...) N
+#define _syscall_narg(...) __syscall_narg(__VA_ARGS__, 6, 5, 4, 3, 2, 1, 0)
+#define _syscall(N, ...) __sysret(my_syscall##N(__VA_ARGS__))
+#define _syscall_n(N, ...) _syscall(N, __VA_ARGS__)
+#define syscall(...) _syscall_n(_syscall_narg(__VA_ARGS__), ##__VA_ARGS__)
 
 #endif /* _NOLIBC_ARCH_RISCV_H */

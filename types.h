@@ -30,10 +30,6 @@
 #define _NOLIBC_TYPES_H
 
 #include "std.h"
-#include <linux/mman.h>
-#include <linux/stat.h>
-#include <linux/time.h>
-#include <linux/wait.h>
 
 
 /* Only the generic macros and types may be defined here. The arch-specific
@@ -157,7 +153,7 @@ struct stat {
 	union { time_t st_ctime; struct timespec st_ctim; }; /* time of last status change */
 };
 
-typedef __kernel_clockid_t clockid_t;
+typedef int clockid_t;
 typedef int timer_t;
 
 #ifndef container_of

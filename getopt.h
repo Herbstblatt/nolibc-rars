@@ -15,10 +15,8 @@ struct FILE;
 static struct FILE *const stderr;
 static int fprintf(struct FILE *stream, const char *fmt, ...);
 
-__attribute__((weak,unused,section(".data.nolibc_getopt")))
 char *optarg;
 
-__attribute__((weak,unused,section(".data.nolibc_getopt")))
 int optind = 1, opterr = 1, optopt;
 
 static __attribute__((unused))

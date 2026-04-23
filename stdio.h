@@ -30,11 +30,10 @@
 #define _NOLIBC_STDIO_H
 
 #include "std.h"
-#include "arch.h"
+#include "rars.h"
 #include "errno.h"
 #include "fcntl.h"
 #include "types.h"
-#include "sys.h"
 #include "stdarg.h"
 #include "stdlib.h"
 #include "string.h"

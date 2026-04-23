@@ -30,12 +30,8 @@
 #define _NOLIBC_TIME_H
 
 #include "std.h"
-#include "arch.h"
+#include "rars.h"
 #include "types.h"
-#include "sys.h"
-
-#include <linux/signal.h>
-#include <linux/time.h>
 
 static __inline__
 void __nolibc_timespec_user_to_kernel(const struct timespec *ts, struct __kernel_timespec *kts)

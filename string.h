@@ -29,7 +29,7 @@
 #ifndef _NOLIBC_STRING_H
 #define _NOLIBC_STRING_H
 
-#include "arch.h"
+#include "rars.h"
 #include "std.h"
 
 static void *malloc(size_t len);
