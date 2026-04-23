@@ -23,8 +23,8 @@
  * OTHER DEALINGS IN THE SOFTWARE.
  */
 
-#ifndef _NOLIBC_ARCH_RISCV_H
-#define _NOLIBC_ARCH_RISCV_H
+#ifndef _NOLIBC_RARS_H
+#define _NOLIBC_RARS_H
 
 #include "compiler.h"
 #include "crt.h"
@@ -39,6 +39,48 @@
  *     registers which are then simply passed as registers to the asm code,
  *     so that we don't have to experience issues with register constraints.
  */
+
+#define RARS_PrintInt            1
+#define RARS_PrintFloat          2
+#define RARS_PrintDouble         3
+#define RARS_PrintString         4
+#define RARS_ReadInt             5
+#define RARS_ReadFloat           6
+#define RARS_ReadDouble          7
+#define RARS_ReadString          8
+#define RARS_Sbrk                9
+#define RARS_Exit                10
+#define RARS_PrintChar           11
+#define RARS_ReadChar            12
+#define RARS_GetCWD              17
+#define RARS_Time                30
+#define RARS_MidiOut             31
+#define RARS_Sleep               32
+#define RARS_MidiOutSync         33
+#define RARS_PrintIntHex         34
+#define RARS_PrintIntBinary      35
+#define RARS_PrintIntUnsigned    36
+#define RARS_RandSeed            40
+#define RARS_RandInt             41
+#define RARS_RandIntRange        42
+#define RARS_RandFloat           43
+#define RARS_RandDouble          44
+#define RARS_ConfirmDialog       50
+#define RARS_InputDialogInt      51
+#define RARS_InputDialogFloat    52
+#define RARS_InputDialogDouble   53
+#define RARS_InputDialogString   54
+#define RARS_MessageDialog       55
+#define RARS_MessageDialogInt    56
+#define RARS_Close               57
+#define RARS_MessageDialogDouble 58
+#define RARS_MessageDialogString 59
+#define RARS_MessageDialogFloat  60
+#define RARS_LSeek               62
+#define RARS_Read                63
+#define RARS_Write               64
+#define RARS_Exit2               93
+#define RARS_Open                1024
 
 #define my_syscall0(num)                                                      \
 ({                                                                            \
@@ -157,21 +199,5 @@
 	);                                                                    \
 	_arg1;                                                                \
 })
-
-#ifndef NOLIBC_NO_RUNTIME
-/* startup code */
-void __attribute__((weak, noreturn)) __nolibc_entrypoint __no_stack_protector _start(void)
-{
-	__asm__ volatile (
-		".option push\n"
-		".option norelax\n"
-		"lla  gp, __global_pointer$\n"
-		".option pop\n"
-		"mv   a0, sp\n"           /* save stack pointer to a0, as arg1 of _start_c */
-		"call _start_c\n"         /* transfer to c runtime                         */
-	);
-	__nolibc_entrypoint_epilogue();
-}
-#endif /* NOLIBC_NO_RUNTIME */
 
 #endif /* _NOLIBC_ARCH_RISCV_H */
