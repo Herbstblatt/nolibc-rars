@@ -23,9 +23,6 @@
  * OTHER DEALINGS IN THE SOFTWARE.
  */
 
-/* make sure to include all global symbols */
-#include "nolibc.h"
-
 #ifndef _NOLIBC_TYPES_H
 #define _NOLIBC_TYPES_H
 
@@ -115,43 +112,9 @@
 #define RB_SW_SUSPEND   LINUX_REBOOT_CMD_SW_SUSPEND
 #define RB_KEXEC        LINUX_REBOOT_CMD_KEXEC
 
-/* Macros used on waitpid()'s return status */
-#define WEXITSTATUS(status) (((status) & 0xff00) >> 8)
-#define WIFEXITED(status)   (((status) & 0x7f) == 0)
-#define WTERMSIG(status)    ((status) & 0x7f)
-#define WIFSIGNALED(status) ((status) - 1 < 0xff)
-
 /* standard exit() codes */
 #define EXIT_SUCCESS 0
 #define EXIT_FAILURE 1
-
-/* for getdents64() */
-struct linux_dirent64 {
-	uint64_t       d_ino;
-	int64_t        d_off;
-	unsigned short d_reclen;
-	unsigned char  d_type;
-	char           d_name[];
-};
-
-/* The format of the struct as returned by the libc to the application, which
- * significantly differs from the format returned by the stat() syscall flavours.
- */
-struct stat {
-	dev_t     st_dev;     /* ID of device containing file */
-	ino_t     st_ino;     /* inode number */
-	mode_t    st_mode;    /* protection */
-	nlink_t   st_nlink;   /* number of hard links */
-	uid_t     st_uid;     /* user ID of owner */
-	gid_t     st_gid;     /* group ID of owner */
-	dev_t     st_rdev;    /* device ID (if special file) */
-	off_t     st_size;    /* total size, in bytes */
-	blksize_t st_blksize; /* blocksize for file system I/O */
-	blkcnt_t  st_blocks;  /* number of 512B blocks allocated */
-	union { time_t st_atime; struct timespec st_atim; }; /* time of last access */
-	union { time_t st_mtime; struct timespec st_mtim; }; /* time of last modification */
-	union { time_t st_ctime; struct timespec st_ctim; }; /* time of last status change */
-};
 
 typedef int clockid_t;
 typedef int timer_t;

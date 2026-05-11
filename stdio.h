@@ -24,15 +24,14 @@
  */
 
 /* make sure to include all global symbols */
-#include "nolibc.h"
 
 #ifndef _NOLIBC_STDIO_H
 #define _NOLIBC_STDIO_H
 
+#include "ctype.h"
 #include "std.h"
 #include "rars.h"
 #include "errno.h"
-#include "fcntl.h"
 #include "types.h"
 #include "stdarg.h"
 #include "stdlib.h"
@@ -59,6 +58,10 @@ typedef struct FILE {
 	char dummy[1];
 } FILE;
 
+#define STDIN_FILENO  0
+#define STDOUT_FILENO 1
+#define STDERR_FILENO 2
+
 static __attribute__((unused)) FILE* const stdin  = (FILE*)(intptr_t)~STDIN_FILENO;
 static __attribute__((unused)) FILE* const stdout = (FILE*)(intptr_t)~STDOUT_FILENO;
 static __attribute__((unused)) FILE* const stderr = (FILE*)(intptr_t)~STDERR_FILENO;
@@ -81,22 +84,20 @@ FILE *fopen(const char *pathname, const char *mode)
 
 	switch (*mode) {
 	case 'r':
-		flags = O_RDONLY;
+		flags = 0;
 		break;
 	case 'w':
-		flags = O_WRONLY | O_CREAT | O_TRUNC;
+		flags = 1;
 		break;
 	case 'a':
-		flags = O_WRONLY | O_CREAT | O_APPEND;
+		flags = 9;
 		break;
 	default:
 		SET_ERRNO(EINVAL); return NULL;
 	}
 
-	if (mode[1] == '+')
-		flags = (flags & ~(O_RDONLY | O_WRONLY)) | O_RDWR;
-
-	fd = open(pathname, flags, 0666);
+	
+	fd = syscall(RARS_Open, pathname, flags);
 	return fdopen(fd, mode);
 }
 
@@ -140,7 +141,7 @@ int fclose(FILE *stream)
 		return -1;
 	}
 
-	if (close(~i))
+	if (syscall(RARS_Close, ~i))
 		return EOF;
 
 	return 0;
@@ -155,7 +156,7 @@ int fgetc(FILE* stream)
 {
 	unsigned char ch;
 
-	if (read(fileno(stream), &ch, 1) <= 0)
+	if (syscall(RARS_Read, fileno(stream), &ch, 1) <= 0)
 		return EOF;
 	return ch;
 }
@@ -176,7 +177,7 @@ int fputc(int c, FILE* stream)
 {
 	unsigned char ch = c;
 
-	if (write(fileno(stream), &ch, 1) <= 0)
+	if (syscall(RARS_Write, fileno(stream), &ch, 1) <= 0)
 		return EOF;
 	return ch;
 }
@@ -200,7 +201,7 @@ int _fwrite(const void *buf, size_t size, FILE *stream)
 	int fd = fileno(stream);
 
 	while (size) {
-		ret = write(fd, buf, size);
+		ret = syscall(RARS_Write, fd, buf, size);
 		if (ret <= 0)
 			return EOF;
 		size -= ret;

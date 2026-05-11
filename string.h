@@ -23,9 +23,6 @@
  * OTHER DEALINGS IN THE SOFTWARE.
  */
 
-/* make sure to include all global symbols */
-#include "nolibc.h"
-
 #ifndef _NOLIBC_STRING_H
 #define _NOLIBC_STRING_H
 
@@ -55,7 +52,6 @@ int memcmp(const void *s1, const void *s2, size_t n)
  * missing.
  */
 void *memmove(void *dst, const void *src, size_t len);
-__attribute__((weak,unused,section(".text.nolibc_memmove")))
 void *memmove(void *dst, const void *src, size_t len)
 {
 	size_t dir, pos;
@@ -80,7 +76,6 @@ void *memmove(void *dst, const void *src, size_t len)
 #ifndef NOLIBC_ARCH_HAS_MEMCPY
 /* must be exported, as it's used by libgcc on ARM */
 void *memcpy(void *dst, const void *src, size_t len);
-__attribute__((weak,unused,section(".text.nolibc_memcpy")))
 void *memcpy(void *dst, const void *src, size_t len)
 {
 	size_t pos = 0;
@@ -98,7 +93,6 @@ void *memcpy(void *dst, const void *src, size_t len)
  * missing.
  */
 void *memset(void *dst, int b, size_t len);
-__attribute__((weak,unused,section(".text.nolibc_memset")))
 void *memset(void *dst, int b, size_t len)
 {
 	char *p = dst;
@@ -165,7 +159,6 @@ char *strcpy(char *dst, const char *src)
  * confusing practice.
  */
 size_t strlen(const char *str);
-__attribute__((weak,unused,section(".text.nolibc_strlen")))
 size_t strlen(const char *str)
 {
 	size_t len;

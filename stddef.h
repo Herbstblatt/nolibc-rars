@@ -5,8 +5,6 @@
  */
 
 /* make sure to include all global symbols */
-#include "nolibc.h"
-
 #ifndef _NOLIBC_STDDEF_H
 #define _NOLIBC_STDDEF_H
 

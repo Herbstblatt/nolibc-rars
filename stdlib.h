@@ -23,9 +23,6 @@
  * OTHER DEALINGS IN THE SOFTWARE.
  */
 
-/* make sure to include all global symbols */
-#include "nolibc.h"
-
 #ifndef _NOLIBC_STDLIB_H
 #define _NOLIBC_STDLIB_H
 
@@ -33,6 +30,7 @@
 #include "rars.h"
 #include "types.h"
 #include "string.h"
+
 
 struct nolibc_heap {
 	size_t	len;
@@ -68,13 +66,13 @@ long long llabs(long long j)
 }
 
 /* must be exported, as it's used by libgcc for various divide functions */
-void abort(void);
-__attribute__((weak,unused,noreturn,section(".text.nolibc_abort")))
-void abort(void)
-{
-	sys_kill(sys_getpid(), SIGABRT);
-	for (;;);
-}
+// void abort(void);
+// __attribute__((weak,unused,noreturn,section(".text.nolibc_abort")))
+// void abort(void)
+// {
+// 	sys_kill(sys_getpid(), SIGABRT);
+// 	for (;;);
+// }
 
 static __attribute__((unused))
 long atol(const char *s)
@@ -105,17 +103,17 @@ int atoi(const char *s)
 	return atol(s);
 }
 
-static __attribute__((unused))
-void free(void *ptr)
-{
-	struct nolibc_heap *heap;
+// static __attribute__((unused))
+// void free(void *ptr)
+// {
+// 	struct nolibc_heap *heap;
 
-	if (!ptr)
-		return;
+// 	if (!ptr)
+// 		return;
 
-	heap = container_of(ptr, struct nolibc_heap, user_p);
-	munmap(heap, heap->len);
-}
+// 	heap = container_of(ptr, struct nolibc_heap, user_p);
+// 	munmap(heap, heap->len);
+// }
 
 #ifndef NOLIBC_NO_RUNTIME
 /* getenv() tries to find the environment variable named <name> in the
@@ -125,85 +123,87 @@ void free(void *ptr)
  * environment variable exists its value is returned otherwise NULL is
  * returned.
  */
-static __attribute__((unused))
-char *getenv(const char *name)
-{
-	int idx, i;
+// static __attribute__((unused))
+// char *getenv(const char *name)
+// {
+// 	int idx, i;
 
-	if (environ) {
-		for (idx = 0; environ[idx]; idx++) {
-			for (i = 0; name[i] && name[i] == environ[idx][i];)
-				i++;
-			if (!name[i] && environ[idx][i] == '=')
-				return &environ[idx][i+1];
-		}
-	}
-	return NULL;
-}
-#endif /* NOLIBC_NO_RUNTIME */
+// 	if (environ) {
+// 		for (idx = 0; environ[idx]; idx++) {
+// 			for (i = 0; name[i] && name[i] == environ[idx][i];)
+// 				i++;
+// 			if (!name[i] && environ[idx][i] == '=')
+// 				return &environ[idx][i+1];
+// 		}
+// 	}
+// 	return NULL;
+// }
+// #endif /* NOLIBC_NO_RUNTIME */
 
-static __attribute__((unused))
-void *malloc(size_t len)
-{
-	struct nolibc_heap *heap;
+// static __attribute__((unused))
+// void *malloc(size_t len)
+// {
+// 	struct nolibc_heap *heap;
 
-	/* Always allocate memory with size multiple of 4096. */
-	len  = sizeof(*heap) + len;
-	len  = (len + 4095UL) & -4096UL;
-	heap = mmap(NULL, len, PROT_READ|PROT_WRITE, MAP_ANONYMOUS|MAP_PRIVATE,
-		    -1, 0);
-	if (__builtin_expect(heap == MAP_FAILED, 0))
-		return NULL;
+// 	/* Always allocate memory with size multiple of 4096. */
+// 	len  = sizeof(*heap) + len;
+// 	len  = (len + 4095UL) & -4096UL;
+// 	heap = mmap(NULL, len, PROT_READ|PROT_WRITE, MAP_ANONYMOUS|MAP_PRIVATE,
+// 		    -1, 0);
+// 	if (__builtin_expect(heap == MAP_FAILED, 0))
+// 		return NULL;
 
-	heap->len = len;
-	return heap->user_p;
-}
+// 	heap->len = len;
+// 	return heap->user_p;
+// }
 
-static __attribute__((unused))
-void *calloc(size_t size, size_t nmemb)
-{
-	size_t x = size * nmemb;
+// static __attribute__((unused))
+// void *calloc(size_t size, size_t nmemb)
+// {
+// 	size_t x = size * nmemb;
 
-	if (__builtin_expect(size && ((x / size) != nmemb), 0)) {
-		SET_ERRNO(ENOMEM);
-		return NULL;
-	}
+// 	if (__builtin_expect(size && ((x / size) != nmemb), 0)) {
+// 		SET_ERRNO(ENOMEM);
+// 		return NULL;
+// 	}
 
-	/*
-	 * No need to zero the heap, the MAP_ANONYMOUS in malloc()
-	 * already does it.
-	 */
-	return malloc(x);
-}
+// 	/*
+// 	 * No need to zero the heap, the MAP_ANONYMOUS in malloc()
+// 	 * already does it.
+// 	 */
+// 	return malloc(x);
+// }
 
-static __attribute__((unused))
-void *realloc(void *old_ptr, size_t new_size)
-{
-	struct nolibc_heap *heap;
-	size_t user_p_len;
-	void *ret;
+// static __attribute__((unused))
+// void *realloc(void *old_ptr, size_t new_size)
+// {
+// 	struct nolibc_heap *heap;
+// 	size_t user_p_len;
+// 	void *ret;
 
-	if (!old_ptr)
-		return malloc(new_size);
+// 	if (!old_ptr)
+// 		return malloc(new_size);
 
-	heap = container_of(old_ptr, struct nolibc_heap, user_p);
-	user_p_len = heap->len - sizeof(*heap);
-	/*
-	 * Don't realloc() if @user_p_len >= @new_size, this block of
-	 * memory is still enough to handle the @new_size. Just return
-	 * the same pointer.
-	 */
-	if (user_p_len >= new_size)
-		return old_ptr;
+// 	heap = container_of(old_ptr, struct nolibc_heap, user_p);
+// 	user_p_len = heap->len - sizeof(*heap);
+// 	/*
+// 	 * Don't realloc() if @user_p_len >= @new_size, this block of
+// 	 * memory is still enough to handle the @new_size. Just return
+// 	 * the same pointer.
+// 	 */
+// 	if (user_p_len >= new_size)
+// 		return old_ptr;
 
-	ret = malloc(new_size);
-	if (__builtin_expect(!ret, 0))
-		return NULL;
+// 	ret = malloc(new_size);
+// 	if (__builtin_expect(!ret, 0))
+// 		return NULL;
 
-	memcpy(ret, heap->user_p, user_p_len);
-	munmap(heap, heap->len);
-	return ret;
-}
+// 	memcpy(ret, heap->user_p, user_p_len);
+// 	munmap(heap, heap->len);
+// 	return ret;
+// }
+
+#endif
 
 /* Converts the unsigned long integer <in> to its hex representation into
  * buffer <buffer>, which must be long enough to store the number and the

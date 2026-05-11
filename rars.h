@@ -27,6 +27,7 @@
 #define _NOLIBC_RARS_H
 
 #include "compiler.h"
+#include "errno.h"
 
 /* Syscalls for RISCV :
  *   - stack is 16-byte aligned

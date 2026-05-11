@@ -23,9 +23,6 @@
  * OTHER DEALINGS IN THE SOFTWARE.
  */
 
-/* make sure to include all global symbols */
-#include "nolibc.h"
-
 #ifndef _NOLIBC_ERRNO_H
 #define _NOLIBC_ERRNO_H
 
@@ -63,10 +60,11 @@
 #define EPIPE		32	/* Broken pipe */
 #define EDOM		33	/* Math argument out of domain of func */
 #define ERANGE		34	/* Math result not representable */
+#define EILSEQ      35  /* Illegal byte sequence */
 
 #ifndef NOLIBC_IGNORE_ERRNO
 #define SET_ERRNO(v) do { errno = (v); } while (0)
-extern int errno;
+int errno;
 #else
 #define SET_ERRNO(v) do { } while (0)
 #endif
