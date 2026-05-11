@@ -1,6 +1,7 @@
 /*
  * time function definitions for NOLIBC
  * Copyright (C) 2017-2022 Willy Tarreau <w@1wt.eu>
+ * Modified in 2026 by Stepan Prokopiev <seprokopev@edu.hse.ru>
  *
  * Permission is hereby granted, free of charge, to any person obtaining
  * a copy of this software and associated documentation files (the
