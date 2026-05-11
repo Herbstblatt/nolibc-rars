@@ -32,10 +32,153 @@
 #include "string.h"
 
 
-struct nolibc_heap {
-	size_t	len;
-	char	user_p[] __attribute__((__aligned__));
+#define NOLIBC_HEAP_ALIGN 16UL
+#define NOLIBC_HEAP_MIN_PAYLOAD NOLIBC_HEAP_ALIGN
+#define NOLIBC_ALIGN_UP(value, align) (((value) + ((align) - 1)) & ~((align) - 1))
+
+struct nolibc_heap_block {
+	size_t size;
+	int free;
+	struct nolibc_heap_block *prev;
+	struct nolibc_heap_block *next;
+	struct nolibc_heap_block *prev_free;
+	struct nolibc_heap_block *next_free;
+	char user_p[] __attribute__((__aligned__(NOLIBC_HEAP_ALIGN)));
 };
+
+#define NOLIBC_HEAP_HEADER_SIZE (offsetof(struct nolibc_heap_block, user_p))
+
+static struct nolibc_heap_block *nolibc_heap_head;
+static struct nolibc_heap_block *nolibc_heap_tail;
+static struct nolibc_heap_block *nolibc_free_head;
+
+static __attribute__((unused))
+size_t nolibc_heap_align(size_t size)
+{
+	return NOLIBC_ALIGN_UP(size, NOLIBC_HEAP_ALIGN);
+}
+
+static __attribute__((unused))
+void *nolibc_sbrk(ptrdiff_t inc)
+{
+	return (void *)my_syscall1(RARS_Sbrk, inc);
+}
+
+static __attribute__((unused))
+void nolibc_free_list_remove(struct nolibc_heap_block *block)
+{
+	if (!block)
+		return;
+
+	if (block->prev_free)
+		block->prev_free->next_free = block->next_free;
+	else if (nolibc_free_head == block)
+		nolibc_free_head = block->next_free;
+
+	if (block->next_free)
+		block->next_free->prev_free = block->prev_free;
+
+	block->prev_free = NULL;
+	block->next_free = NULL;
+}
+
+static __attribute__((unused))
+void nolibc_free_list_insert(struct nolibc_heap_block *block)
+{
+	if (!block)
+		return;
+
+	block->prev_free = NULL;
+	block->next_free = nolibc_free_head;
+	if (nolibc_free_head)
+		nolibc_free_head->prev_free = block;
+	nolibc_free_head = block;
+}
+
+static __attribute__((unused))
+void nolibc_split_block(struct nolibc_heap_block *block, size_t size)
+{
+	size_t remaining;
+	struct nolibc_heap_block *new_block;
+
+	if (!block)
+		return;
+
+	remaining = block->size - size;
+	if (remaining < (NOLIBC_HEAP_HEADER_SIZE + NOLIBC_HEAP_MIN_PAYLOAD))
+		return;
+
+	new_block = (struct nolibc_heap_block *)((char *)block->user_p + size);
+	new_block->size = remaining - NOLIBC_HEAP_HEADER_SIZE;
+	new_block->free = 1;
+	new_block->prev = block;
+	new_block->next = block->next;
+	if (block->next)
+		block->next->prev = new_block;
+	else
+		nolibc_heap_tail = new_block;
+	block->next = new_block;
+	block->size = size;
+	new_block->prev_free = NULL;
+	new_block->next_free = NULL;
+	
+	nolibc_free_list_insert(new_block);
+}
+
+static __attribute__((unused))
+struct nolibc_heap_block *nolibc_merge_with_next(struct nolibc_heap_block *block)
+{
+	struct nolibc_heap_block *next;
+
+	if (!block)
+		return NULL;
+
+	next = block->next;
+	if (!next || !next->free)
+		return block;
+
+	nolibc_free_list_remove(next);
+	block->size += NOLIBC_HEAP_HEADER_SIZE + next->size;
+	block->next = next->next;
+	if (next->next)
+		next->next->prev = block;
+	else
+		nolibc_heap_tail = block;
+
+	return block;
+}
+
+static __attribute__((unused))
+struct nolibc_heap_block *nolibc_heap_extend(size_t size)
+{
+	size_t total;
+	struct nolibc_heap_block *block;
+	void *mem;
+
+	total = NOLIBC_HEAP_HEADER_SIZE + size;
+	total = nolibc_heap_align(total);
+	mem = nolibc_sbrk((ptrdiff_t)total);
+	if (mem == (void *)-1) {
+		SET_ERRNO(ENOMEM);
+		return NULL;
+	}
+
+	block = (struct nolibc_heap_block *)mem;
+	block->size = total - NOLIBC_HEAP_HEADER_SIZE;
+	block->free = 0;
+	block->prev = nolibc_heap_tail;
+	block->next = NULL;
+	block->prev_free = NULL;
+	block->next_free = NULL;
+
+	if (nolibc_heap_tail)
+		nolibc_heap_tail->next = block;
+	else
+		nolibc_heap_head = block;
+	
+	nolibc_heap_tail = block;
+	return block;
+}
 
 /* Buffer used to store int-to-ASCII conversions. Will only be implemented if
  * any of the related functions is implemented. The area is large enough to
@@ -103,17 +246,29 @@ int atoi(const char *s)
 	return atol(s);
 }
 
-// static __attribute__((unused))
-// void free(void *ptr)
-// {
-// 	struct nolibc_heap *heap;
+static __attribute__((unused))
+void free(void *ptr)
+{
+	struct nolibc_heap_block *block;
 
-// 	if (!ptr)
-// 		return;
+	if (!ptr)
+		return;
 
-// 	heap = container_of(ptr, struct nolibc_heap, user_p);
-// 	munmap(heap, heap->len);
-// }
+	block = container_of(ptr, struct nolibc_heap_block, user_p);
+	if (block->free)
+		return;
+
+	block->free = 1;
+
+	if (block->prev && block->prev->free) {
+		nolibc_free_list_remove(block->prev);
+		block = nolibc_merge_with_next(block->prev);
+	}
+	if (block->next && block->next->free)
+		block = nolibc_merge_with_next(block);
+
+	nolibc_free_list_insert(block);
+}
 
 #ifndef NOLIBC_NO_RUNTIME
 /* getenv() tries to find the environment variable named <name> in the
@@ -140,68 +295,100 @@ int atoi(const char *s)
 // }
 // #endif /* NOLIBC_NO_RUNTIME */
 
-// static __attribute__((unused))
-// void *malloc(size_t len)
-// {
-// 	struct nolibc_heap *heap;
+static __attribute__((unused))
+void *malloc(size_t len)
+{
+	struct nolibc_heap_block *block;
+	size_t size;
 
-// 	/* Always allocate memory with size multiple of 4096. */
-// 	len  = sizeof(*heap) + len;
-// 	len  = (len + 4095UL) & -4096UL;
-// 	heap = mmap(NULL, len, PROT_READ|PROT_WRITE, MAP_ANONYMOUS|MAP_PRIVATE,
-// 		    -1, 0);
-// 	if (__builtin_expect(heap == MAP_FAILED, 0))
-// 		return NULL;
+	if (len == 0)
+		len = NOLIBC_HEAP_MIN_PAYLOAD;
 
-// 	heap->len = len;
-// 	return heap->user_p;
-// }
+	size = nolibc_heap_align(len);
 
-// static __attribute__((unused))
-// void *calloc(size_t size, size_t nmemb)
-// {
-// 	size_t x = size * nmemb;
+	for (block = nolibc_free_head; block; block = block->next_free) {
+		if (block->size >= size)
+			break;
+	}
 
-// 	if (__builtin_expect(size && ((x / size) != nmemb), 0)) {
-// 		SET_ERRNO(ENOMEM);
-// 		return NULL;
-// 	}
+	if (!block) {
+		block = nolibc_heap_extend(size);
+		if (!block)
+			return NULL;
+		return block->user_p;
+	}
 
-// 	/*
-// 	 * No need to zero the heap, the MAP_ANONYMOUS in malloc()
-// 	 * already does it.
-// 	 */
-// 	return malloc(x);
-// }
+	nolibc_free_list_remove(block);
+	block->free = 0;
+	nolibc_split_block(block, size);
+	return block->user_p;
+}
 
-// static __attribute__((unused))
-// void *realloc(void *old_ptr, size_t new_size)
-// {
-// 	struct nolibc_heap *heap;
-// 	size_t user_p_len;
-// 	void *ret;
+static __attribute__((unused))
+void *calloc(size_t size, size_t nmemb)
+{
+	size_t x;
+	void *ptr;
 
-// 	if (!old_ptr)
-// 		return malloc(new_size);
+	if (size && (nmemb > (SIZE_MAX / size))) {
+		SET_ERRNO(ENOMEM);
+		return NULL;
+	}
 
-// 	heap = container_of(old_ptr, struct nolibc_heap, user_p);
-// 	user_p_len = heap->len - sizeof(*heap);
-// 	/*
-// 	 * Don't realloc() if @user_p_len >= @new_size, this block of
-// 	 * memory is still enough to handle the @new_size. Just return
-// 	 * the same pointer.
-// 	 */
-// 	if (user_p_len >= new_size)
-// 		return old_ptr;
+	x = size * nmemb;
+	ptr = malloc(x);
+	if (!ptr)
+		return NULL;
 
-// 	ret = malloc(new_size);
-// 	if (__builtin_expect(!ret, 0))
-// 		return NULL;
+	memset(ptr, 0, x);
+	return ptr;
+}
 
-// 	memcpy(ret, heap->user_p, user_p_len);
-// 	munmap(heap, heap->len);
-// 	return ret;
-// }
+static __attribute__((unused))
+void *realloc(void *old_ptr, size_t new_size)
+{
+	struct nolibc_heap_block *block;
+	struct nolibc_heap_block *next;
+	void *ret;
+	size_t size;
+	size_t copy_size;
+
+	if (!old_ptr)
+		return malloc(new_size);
+	if (new_size == 0) {
+		free(old_ptr);
+		return NULL;
+	}
+
+	block = container_of(old_ptr, struct nolibc_heap_block, user_p);
+	size = nolibc_heap_align(new_size);
+
+	if (block->size >= size) {
+		nolibc_split_block(block, size);
+		return old_ptr;
+	}
+
+	next = block->next;
+	if (next && next->free && (block->size + NOLIBC_HEAP_HEADER_SIZE + next->size) >= size) {
+		nolibc_free_list_remove(next);
+		block->size += NOLIBC_HEAP_HEADER_SIZE + next->size;
+		block->next = next->next;
+		if (next->next)
+			next->next->prev = block;
+		else
+			nolibc_heap_tail = block;
+		nolibc_split_block(block, size);
+		return old_ptr;
+	}
+
+	ret = malloc(new_size);
+	if (!ret)
+		return NULL;
+	copy_size = block->size < size ? block->size : size;
+	memcpy(ret, old_ptr, copy_size);
+	free(old_ptr);
+	return ret;
+}
 
 #endif
 
